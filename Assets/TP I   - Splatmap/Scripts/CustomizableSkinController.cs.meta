@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 730370bbd43eee244a903384a3fe2f4c
+timeCreated: 1507591444
+licenseType: Free
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences:
+  - material: {fileID: 2100000, guid: cfca079aafba0e24b8556e4d84a1c6da, type: 2}
+  - shirtsSlider: {instanceID: 0}
+  - shortsSlider: {instanceID: 0}
+  - socksSlider: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
