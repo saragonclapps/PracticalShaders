@@ -14,6 +14,7 @@ namespace AmplifyShaderEditor
 		public string Connections = string.Empty;
 		public int OldNodeId = -1;
 		public int NewNodeId = -1;
+		
 		public ClipboardData( string data, string connections, int oldNodeId )
 		{
 			Data = data;
@@ -29,18 +30,63 @@ namespace AmplifyShaderEditor
 
 	public class Clipboard
 	{
-		private const string ClipboardId = "AMPLIFY_CLIPBOARD_ID";
+		public const string ClipboardId = "AMPLIFY_CLIPBOARD_ID";
 		private readonly string[] ClipboardTagId = { "#CLIP_ITEM#" };
 		private List<ClipboardData> m_clipboardStrData;
 		private Dictionary<int, ClipboardData> m_clipboardAuxData;
+		private Dictionary<string, ClipboardData> m_multiPassMasterNodeData;
 
 		public Clipboard()
 		{
 			m_clipboardStrData = new List<ClipboardData>();
 			m_clipboardAuxData = new Dictionary<int, ClipboardData>();
+			m_multiPassMasterNodeData = new Dictionary<string, ClipboardData>();
+		}
+		
+		public void AddMultiPassNodesToClipboard( List<TemplateMultiPassMasterNode> masterNodes )
+		{
+			Debug.Log( "Caching master nodes" );
+			m_multiPassMasterNodeData.Clear();
+			int templatesAmount = masterNodes.Count;
+			for( int i = 0; i < templatesAmount; i++ )
+			{
+				if( !masterNodes[ i ].InvalidNode )
+				{
+					string data = string.Empty;
+					string connection = string.Empty;
+					masterNodes[ i ].FullWriteToString( ref data, ref connection );
+					ClipboardData clipboardData = new ClipboardData( data, connection, masterNodes[ i ].UniqueId );
+					m_multiPassMasterNodeData.Add( masterNodes[ i ].PassUniqueName, clipboardData );
+				}
+			}
 		}
 
-		public void AddToClipboard( List<ParentNode> selectedNodes , Vector3 initialPosition )
+		public void GetMultiPassNodesFromClipboard( List<TemplateMultiPassMasterNode> masterNodes )
+		{
+			int templatesAmount = masterNodes.Count;
+			for( int i = 0; i < templatesAmount; i++ )
+			{
+				if( m_multiPassMasterNodeData.ContainsKey( masterNodes[ i ].PassUniqueName ) )
+				{
+					ClipboardData nodeData = m_multiPassMasterNodeData[ masterNodes[ i ].PassUniqueName ];
+					string[] nodeParams = nodeData.Data.Split( IOUtils.FIELD_SEPARATOR );
+					masterNodes[ i ].FullReadFromString( ref nodeParams );
+				}
+			}
+
+			for( int i = 0; i < templatesAmount; i++ )
+			{
+				if( m_multiPassMasterNodeData.ContainsKey( masterNodes[ i ].PassUniqueName ) )
+				{
+					masterNodes[ i ].SetReadOptions();
+					masterNodes[ i ].ForceOptionsRefresh();
+				}
+			}
+
+			m_multiPassMasterNodeData.Clear();
+		}
+
+		public void AddToClipboard( List<ParentNode> selectedNodes , Vector3 initialPosition, ParentGraph graph )
 		{
 			//m_clipboardStrData.Clear();
 			//m_clipboardAuxData.Clear();
@@ -50,8 +96,7 @@ namespace AmplifyShaderEditor
 			int count = selectedNodes.Count;
 			for ( int i = 0; i < count; i++ )
 			{
-				
-				if ( UIUtils.CurrentWindow.IsShaderFunctionWindow || selectedNodes[ i ].UniqueId != masterNodeId )
+				if ( UIUtils.CurrentWindow.IsShaderFunctionWindow || !graph.IsMasterNode( selectedNodes[ i ] ))
 				{
 					string nodeData = string.Empty;
 					string connections = string.Empty;
@@ -179,6 +224,7 @@ namespace AmplifyShaderEditor
 		{
 			m_clipboardStrData.Clear();
 			m_clipboardAuxData.Clear();
+			m_multiPassMasterNodeData.Clear();
 		}
 
 		public ClipboardData GetClipboardData( int oldNodeId )
@@ -199,5 +245,7 @@ namespace AmplifyShaderEditor
 		{
 			get { return m_clipboardStrData; }
 		}
+
+		public bool HasCachedMasterNodes { get { return m_multiPassMasterNodeData.Count > 0; } }
 	}
 }

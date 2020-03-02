@@ -35,16 +35,29 @@ namespace AmplifyShaderEditor
 			PreviewMaterial.SetFloat( m_cachedUsingEditorId, (m_inputPorts[ 2 ].IsConnected ? 0 : 1 ) );
 		}
 
-		//public override void DrawProperties()
-		//{
-		//	base.DrawProperties();
-		//	EditorGUILayout.HelpBox("Rotates UVs but can also be used to rotate other Vector2 values\n\nAnchor is the rotation point in UV space from which you rotate the UVs\nTime is the amount of rotation applied [0,1], if left unconnected it will use time as the default value", MessageType.None);
-		//}
+		public override void OnInputPortConnected( int portId, int otherNodeId, int otherPortId, bool activateNode = true )
+		{
+			base.OnInputPortConnected( portId, otherNodeId, otherPortId, activateNode );
+			if( portId == 2 )
+			{
+				m_continuousPreviewRefresh = false;
+			}
+		}
+
+		public override void OnInputPortDisconnected( int portId )
+		{
+			base.OnInputPortDisconnected( portId );
+			if( portId == 2 )
+			{
+				m_continuousPreviewRefresh = true;
+			}
+		}
+
 
 		public override string GenerateShaderForOutput( int outputId, ref MasterNodeDataCollector dataCollector, bool ignoreLocalvar )
 		{
-			if( m_outputPorts[ 0 ].IsLocalValue )
-				return m_outputPorts[ 0 ].LocalValue;
+			if( m_outputPorts[ 0 ].IsLocalValue( dataCollector.PortCategory ) )
+				return m_outputPorts[ 0 ].LocalValue( dataCollector.PortCategory );
 
 			string result = string.Empty;
 			string uv = m_inputPorts[ 0 ].GeneratePortInstructions( ref dataCollector );
@@ -53,7 +66,8 @@ namespace AmplifyShaderEditor
 			string time = m_inputPorts[ 2 ].GeneratePortInstructions( ref dataCollector );
 			if ( !m_inputPorts[ 2 ].IsConnected )
 			{
-				dataCollector.AddToIncludes( UniqueId, Constants.UnityShaderVariables );
+				if( !( dataCollector.IsTemplate && dataCollector.IsSRP ) )
+					dataCollector.AddToIncludes( UniqueId, Constants.UnityShaderVariables );
 				time += " * _Time.y";
 			}
 
@@ -67,7 +81,7 @@ namespace AmplifyShaderEditor
 			string value =  "mul( " + result + " - " + anchor + " , float2x2( "+cosVar+" , -"+sinVar+" , "+sinVar+" , "+cosVar+" )) + "+anchor;
 			RegisterLocalVariable( 0, value, ref dataCollector, "rotator" + OutputId );
 
-			return m_outputPorts[ 0 ].LocalValue;
+			return m_outputPorts[ 0 ].LocalValue( dataCollector.PortCategory );
 		}
 
 		public override void RefreshExternalReferences()

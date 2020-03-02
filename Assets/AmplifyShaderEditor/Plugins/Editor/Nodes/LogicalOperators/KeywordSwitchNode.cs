@@ -88,22 +88,22 @@ namespace AmplifyShaderEditor
 
 		public override string GenerateShaderForOutput( int outputId, ref MasterNodeDataCollector dataCollector, bool ignoreLocalvar )
 		{
-			if ( m_outputPorts[ 0 ].IsLocalValue )
-				return m_outputPorts[ 0 ].LocalValue;
+			if ( m_outputPorts[ 0 ].IsLocalValue( dataCollector.PortCategory ) )
+				return m_outputPorts[ 0 ].LocalValue( dataCollector.PortCategory );
 
 			string trueCode = m_inputPorts[ 0 ].GeneratePortInstructions( ref dataCollector );
 			string falseCode = m_inputPorts[ 1 ].GeneratePortInstructions( ref dataCollector );
 
 			string localVarName = "simpleKeywordVar"+OutputId;
-			string outType = UIUtils.PrecisionWirePortToCgType( m_currentPrecisionType, m_outputPorts[ 0 ].DataType );
+			string outType = UIUtils.PrecisionWirePortToCgType( CurrentPrecisionType, m_outputPorts[ 0 ].DataType );
 			dataCollector.AddLocalVariable( UniqueId, "#ifdef " + m_currentKeyword, true );
 			dataCollector.AddLocalVariable( UniqueId, outType + " " + localVarName  + " = " + trueCode + ";", true );
 			dataCollector.AddLocalVariable( UniqueId, "#else", true );
 			dataCollector.AddLocalVariable( UniqueId, outType + " " + localVarName + " = " + falseCode + ";", true );
 			dataCollector.AddLocalVariable( UniqueId, "#endif", true );
-			m_outputPorts[ 0 ].SetLocalValue( localVarName );
+			m_outputPorts[ 0 ].SetLocalValue( localVarName, dataCollector.PortCategory );
 
-			return m_outputPorts[ 0 ].LocalValue;
+			return m_outputPorts[ 0 ].LocalValue( dataCollector.PortCategory );
 		}
 
 		void UpdateDisconnected( int portId )

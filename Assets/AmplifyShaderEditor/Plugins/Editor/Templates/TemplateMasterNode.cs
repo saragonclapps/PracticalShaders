@@ -1,5 +1,8 @@
 // Amplify Shader Editor - Visual Shader Editing Tool
 // Copyright (c) Amplify Creations, Lda <info@amplify.pt>
+
+// THIS FILE IS DEPRECATED AND SHOULD NOT BE USED
+
 #define SHOW_TEMPLATE_HELP_BOX
 
 using System;
@@ -10,12 +13,13 @@ using UnityEditor;
 namespace AmplifyShaderEditor
 {
 	[Serializable]
-	[NodeAttributes( "Template Master Node", "Master", "Shader Generated according to template rules", null, KeyCode.None, false )]
+	[NodeAttributes( "Template Master Node", "Master", "Shader Generated according to template rules", null, KeyCode.None, false, true, "Template MultiPass Master Node", typeof( TemplateMultiPassMasterNode ) )]
 	public sealed class TemplateMasterNode : MasterNode
 	{
 		private const string WarningMessage = "Templates is a feature that is still heavily under development and users may experience some problems.\nPlease email support@amplify.pt if any issue occurs.";
 		private const string CurrentTemplateLabel = "Current Template";
 		private const string OpenTemplateStr = "Edit Template";
+
 		//protected const string SnippetsFoldoutStr = " Snippets";
 		//[SerializeField]
 		//private bool m_snippetsFoldout = true;
@@ -33,14 +37,33 @@ namespace AmplifyShaderEditor
 		[SerializeField]
 		private string m_templateName = string.Empty;
 
+		[SerializeField]
+		private TemplatesBlendModule m_blendOpHelper = new TemplatesBlendModule();
+
+		[SerializeField]
+		private TemplateCullModeModule m_cullModeHelper = new TemplateCullModeModule();
+
+		[SerializeField]
+		private TemplateColorMaskModule m_colorMaskHelper = new TemplateColorMaskModule();
+
+		[SerializeField]
+		private TemplatesStencilBufferModule m_stencilBufferHelper = new TemplatesStencilBufferModule();
+
+		[SerializeField]
+		private TemplateDepthModule m_depthOphelper = new TemplateDepthModule();
+
+		[SerializeField]
+		private TemplateTagsModule m_tagsHelper = new TemplateTagsModule();
+
 		protected override void CommonInit( int uniqueId )
 		{
 			base.CommonInit( uniqueId );
 			m_masterNodeCategory = 1;// First Template
 			m_marginPreviewLeft = 20;
 			m_insideSize.y = 60;
+			m_customPrecision = true;
 		}
-		
+
 		public override void ReleaseResources()
 		{
 			if( m_currentTemplate != null && m_currentTemplate.AvailableShaderProperties != null )
@@ -53,30 +76,64 @@ namespace AmplifyShaderEditor
 				}
 			}
 		}
-		
+
 		public override void OnEnable()
 		{
 			base.OnEnable();
 			m_reRegisterTemplateData = true;
 		}
 
+		void FetchInfoFromTemplate()
+		{
+			if( m_currentTemplate.BlendData.DataCheck == TemplateDataCheck.Valid )
+				m_blendOpHelper.ConfigureFromTemplateData( m_currentTemplate.BlendData );
+
+			if( m_currentTemplate.CullModeData.DataCheck == TemplateDataCheck.Valid )
+				m_cullModeHelper.ConfigureFromTemplateData( m_currentTemplate.CullModeData );
+
+			if( m_currentTemplate.ColorMaskData.DataCheck == TemplateDataCheck.Valid )
+				m_colorMaskHelper.ConfigureFromTemplateData( m_currentTemplate.ColorMaskData );
+
+			if( m_currentTemplate.StencilData.DataCheck == TemplateDataCheck.Valid )
+				m_stencilBufferHelper.ConfigureFromTemplateData( m_currentTemplate.StencilData );
+
+			if( m_currentTemplate.DepthData.DataCheck == TemplateDataCheck.Valid )
+				m_depthOphelper.ConfigureFromTemplateData( m_currentTemplate.DepthData );
+
+			if( m_currentTemplate.TagData.DataCheck == TemplateDataCheck.Valid )
+				m_tagsHelper.ConfigureFromTemplateData( m_currentTemplate.TagData );
+		}
+
 		void FetchCurrentTemplate()
 		{
-			m_currentTemplate = TemplatesManager.GetTemplate( m_templateGUID );
+			m_currentTemplate = m_containerGraph.ParentWindow.TemplatesManagerInstance.GetTemplate( m_templateGUID ) as TemplateData;
 			if( m_currentTemplate == null )
 			{
-				m_currentTemplate = TemplatesManager.GetTemplate( m_templateName );
+				m_currentTemplate = m_containerGraph.ParentWindow.TemplatesManagerInstance.GetTemplate( m_templateName ) as TemplateData;
 			}
 
-			if( m_currentTemplate != null && m_inputPorts.Count != m_currentTemplate.InputDataList.Count )
+			if( m_currentTemplate != null )
 			{
-				DeleteAllInputConnections( true );
-
-				List<TemplateInputData> inputDataList = m_currentTemplate.InputDataList;
-				int count = inputDataList.Count;
-				for( int i = 0; i < count; i++ )
+				if( m_inputPorts.Count != m_currentTemplate.InputDataList.Count )
 				{
-					AddInputPort( inputDataList[ i ].DataType, false, inputDataList[ i ].PortName, inputDataList[ i ].OrderId, inputDataList[ i ].PortCategory, inputDataList[ i ].PortUniqueId );
+					DeleteAllInputConnections( true );
+
+					List<TemplateInputData> inputDataList = m_currentTemplate.InputDataList;
+					int count = inputDataList.Count;
+					for( int i = 0; i < count; i++ )
+					{
+						AddInputPort( inputDataList[ i ].DataType, false, inputDataList[ i ].PortName, inputDataList[ i ].OrderId, inputDataList[ i ].PortCategory, inputDataList[ i ].PortUniqueId );
+					}
+					FetchInfoFromTemplate();
+				}
+				else
+				{
+					List<TemplateInputData> inputDataList = m_currentTemplate.InputDataList;
+					int count = inputDataList.Count;
+					for( int i = 0; i < count; i++ )
+					{
+						m_inputPorts[ i ].ChangeProperties( inputDataList[ i ].PortName, inputDataList[ i ].DataType, false );
+					}
 				}
 			}
 		}
@@ -85,12 +142,12 @@ namespace AmplifyShaderEditor
 		{
 			FetchCurrentTemplate();
 
-			int templateCount = TemplatesManager.TemplateCount;
+			int templateCount = m_containerGraph.ParentWindow.TemplatesManagerInstance.TemplateCount;
 			m_availableCategories = new MasterNodeCategoriesData[ templateCount + 1 ];
 			m_availableCategoryLabels = new GUIContent[ templateCount + 1 ];
 
 			m_availableCategories[ 0 ] = new MasterNodeCategoriesData( AvailableShaderTypes.SurfaceShader, string.Empty );
-			m_availableCategoryLabels[ 0 ] = new GUIContent( "Surface Shader" );
+			m_availableCategoryLabels[ 0 ] = new GUIContent( "Surface" );
 			if( m_currentTemplate == null )
 			{
 				m_masterNodeCategory = -1;
@@ -99,7 +156,7 @@ namespace AmplifyShaderEditor
 			for( int i = 0; i < templateCount; i++ )
 			{
 				int idx = i + 1;
-				TemplateData templateData = TemplatesManager.GetTemplate( i );
+				TemplateData templateData = m_containerGraph.ParentWindow.TemplatesManagerInstance.GetTemplate( i ) as TemplateData;
 
 				if( m_currentTemplate != null && m_currentTemplate.GUID.Equals( templateData.GUID ) )
 					m_masterNodeCategory = idx;
@@ -111,11 +168,11 @@ namespace AmplifyShaderEditor
 
 		void SetCategoryIdxFromTemplate()
 		{
-			int templateCount = TemplatesManager.TemplateCount;
+			int templateCount = m_containerGraph.ParentWindow.TemplatesManagerInstance.TemplateCount;
 			for( int i = 0; i < templateCount; i++ )
 			{
 				int idx = i + 1;
-				TemplateData templateData = TemplatesManager.GetTemplate( i );
+				TemplateData templateData = m_containerGraph.ParentWindow.TemplatesManagerInstance.GetTemplate( i ) as TemplateData;
 				if( templateData != null && m_currentTemplate != null && m_currentTemplate.GUID.Equals( templateData.GUID ) )
 					m_masterNodeCategory = idx;
 			}
@@ -150,8 +207,9 @@ namespace AmplifyShaderEditor
 			m_fireTemplateChange = true;
 			m_templateGUID = newTemplate.GUID;
 			m_templateName = newTemplate.DefaultShaderName;
+			FetchInfoFromTemplate();
 		}
-		
+
 		void RegisterProperties()
 		{
 			if( m_currentTemplate != null )
@@ -181,18 +239,56 @@ namespace AmplifyShaderEditor
 				}
 			}
 		}
-		
+
 		public override void DrawProperties()
 		{
+			if( m_currentTemplate == null )
+				return;
+
 			base.DrawProperties();
-			bool generalIsVisible = EditorVariablesManager.ExpandedGeneralShaderOptions.Value;
+
+			bool generalIsVisible = ContainerGraph.ParentWindow.InnerWindowVariables.ExpandedGeneralShaderOptions;
 			NodeUtils.DrawPropertyGroup( ref generalIsVisible, GeneralFoldoutStr, DrawGeneralOptions );
-			EditorVariablesManager.ExpandedGeneralShaderOptions.Value = generalIsVisible;
+			ContainerGraph.ParentWindow.InnerWindowVariables.ExpandedGeneralShaderOptions = generalIsVisible;
+			if( m_currentTemplate.BlendData.DataCheck == TemplateDataCheck.Valid )
+				m_blendOpHelper.Draw( this );
+
+
+			if( m_currentTemplate.StencilData.DataCheck == TemplateDataCheck.Valid )
+			{
+				CullMode cullMode = ( m_currentTemplate.CullModeData.DataCheck == TemplateDataCheck.Valid ) ? m_cullModeHelper.CurrentCullMode : CullMode.Back;
+				m_stencilBufferHelper.Draw( this, cullMode );
+			}
+
+			if( m_currentTemplate.DepthData.DataCheck == TemplateDataCheck.Valid )
+				m_depthOphelper.Draw( this );
+
+			if( m_currentTemplate.TagData.DataCheck == TemplateDataCheck.Valid )
+				m_tagsHelper.Draw( this );
+
+			DrawMaterialInputs( UIUtils.MenuItemToolbarStyle );
+
 			//	NodeUtils.DrawPropertyGroup( ref m_snippetsFoldout, SnippetsFoldoutStr, DrawSnippetOptions );
 			if( GUILayout.Button( OpenTemplateStr ) && m_currentTemplate != null )
 			{
-				AssetDatabase.OpenAsset( AssetDatabase.LoadAssetAtPath<Shader>( AssetDatabase.GUIDToAssetPath( m_currentTemplate.GUID ) ), 1 );
+				try
+				{
+					string pathname = AssetDatabase.GUIDToAssetPath( m_currentTemplate.GUID );
+					if( !string.IsNullOrEmpty( pathname ) )
+					{
+						Shader selectedTemplate = AssetDatabase.LoadAssetAtPath<Shader>( pathname );
+						if( selectedTemplate != null )
+						{
+							AssetDatabase.OpenAsset( selectedTemplate, 1 );
+						}
+					}
+				}
+				catch( Exception e )
+				{
+					Debug.LogException( e );
+				}
 			}
+
 #if SHOW_TEMPLATE_HELP_BOX
 			EditorGUILayout.HelpBox( WarningMessage, MessageType.Warning );
 #endif
@@ -203,12 +299,22 @@ namespace AmplifyShaderEditor
 		{
 			DrawShaderName();
 			DrawCurrentShaderType();
+			EditorGUI.BeginChangeCheck();
+			DrawPrecisionProperty( false );
+			if( EditorGUI.EndChangeCheck() )
+				ContainerGraph.CurrentPrecision = m_currentPrecisionType;
+
+			if( m_currentTemplate.CullModeData.DataCheck == TemplateDataCheck.Valid )
+				m_cullModeHelper.Draw( this );
+
+			if( m_currentTemplate.ColorMaskData.DataCheck == TemplateDataCheck.Valid )
+				m_colorMaskHelper.Draw( this );
 		}
 
-		public void DrawSnippetOptions()
-		{
-			m_currentTemplate.DrawSnippetProperties( this );
-		}
+		//public void DrawSnippetOptions()
+		//{
+		//    m_currentTemplate.DrawSnippetProperties( this );
+		//}
 
 		bool CreateInstructionsForList( ref List<InputPort> ports, ref string shaderBody, ref List<string> vertexInstructions, ref List<string> fragmentInstructions )
 		{
@@ -232,7 +338,7 @@ namespace AmplifyShaderEditor
 					if( m_currentDataCollector.DirtySpecialLocalVariables )
 					{
 						string cleanVariables = m_currentDataCollector.SpecialLocalVariables.Replace( "\t", string.Empty );
-						m_currentDataCollector.AddInstructions( cleanVariables, false);
+						m_currentDataCollector.AddInstructions( cleanVariables, false );
 						m_currentDataCollector.ClearSpecialLocalVariables();
 					}
 
@@ -264,25 +370,19 @@ namespace AmplifyShaderEditor
 			return isValid;
 		}
 
-
-		public override void OnNodeLayout( DrawInfo drawInfo )
+		public override void Draw( DrawInfo drawInfo )
 		{
+			base.Draw( drawInfo );
+
 			if( m_currentTemplate == null )
 			{
 				FetchCurrentTemplate();
 			}
 
-			base.OnNodeLayout( drawInfo );
-
 			if( m_reRegisterTemplateData )
 			{
 				RegisterProperties();
 			}
-		}
-		
-		public override void Draw( DrawInfo drawInfo )
-		{
-			base.Draw( drawInfo );
 
 			if( m_containerGraph.IsInstancedShader )
 			{
@@ -326,14 +426,18 @@ namespace AmplifyShaderEditor
 				return m_currentShader;
 
 			//Create data collector
+			ForceReordering();
 			base.Execute( pathname, isFullPath );
+
+			SetupNodeCategories();
 
 			m_currentDataCollector.TemplateDataCollectorInstance.BuildFromTemplateData( m_currentDataCollector, m_currentTemplate );
 			int shaderPropertiesAmount = m_currentTemplate.AvailableShaderProperties.Count;
 			for( int i = 0; i < shaderPropertiesAmount; i++ )
 			{
-				m_currentDataCollector.SoftRegisterUniform( m_currentTemplate.AvailableShaderProperties[ i ].PropertyName );
+				m_currentDataCollector.SoftRegisterUniform( m_currentTemplate.AvailableShaderProperties[ i ] );
 			}
+			m_containerGraph.CheckPropertiesAutoRegister( ref m_currentDataCollector );
 
 			//Sort ports by both 
 			List<InputPort> fragmentPorts = new List<InputPort>();
@@ -348,6 +452,7 @@ namespace AmplifyShaderEditor
 			bool validBody = true;
 
 			validBody = CreateInstructionsForList( ref fragmentPorts, ref shaderBody, ref vertexInstructions, ref fragmentInstructions ) && validBody;
+			ContainerGraph.ResetNodesLocalVariablesIfNot( MasterNodePortCategory.Vertex );
 			validBody = CreateInstructionsForList( ref vertexPorts, ref shaderBody, ref vertexInstructions, ref fragmentInstructions ) && validBody;
 
 			m_currentTemplate.ResetTemplateUsageData();
@@ -373,7 +478,6 @@ namespace AmplifyShaderEditor
 				m_currentDataCollector.UniformsList.AddRange( m_currentDataCollector.InstancedPropertiesList );
 			}
 
-
 			//Add Functions
 			m_currentDataCollector.UniformsList.AddRange( m_currentDataCollector.FunctionsList );
 
@@ -383,11 +487,62 @@ namespace AmplifyShaderEditor
 			validBody = m_currentTemplate.FillTemplateBody( m_currentTemplate.ShaderNameId, ref shaderBody, string.Format( TemplatesManager.NameFormatter, m_shaderName ) ) && validBody;
 			validBody = m_currentTemplate.FillTemplateBody( TemplatesManager.TemplatePassTag, ref shaderBody, m_currentDataCollector.GrabPassList ) && validBody;
 			validBody = m_currentTemplate.FillTemplateBody( TemplatesManager.TemplatePragmaTag, ref shaderBody, m_currentDataCollector.IncludesList ) && validBody;
-			validBody = m_currentTemplate.FillTemplateBody( TemplatesManager.TemplateTagsTag, ref shaderBody, m_currentDataCollector.TagsList ) && validBody;
-			validBody = m_currentTemplate.FillTemplateBody( TemplatesManager.TemplatePropertyTag, ref shaderBody, m_currentDataCollector.PropertiesList ) && validBody;
+			//validBody = m_currentTemplate.FillTemplateBody( TemplatesManager.TemplateTagsTag, ref shaderBody, m_currentDataCollector.TagsList ) && validBody;
+			validBody = m_currentTemplate.FillTemplateBody( TemplatesManager.TemplatePropertyTag, ref shaderBody, m_currentDataCollector.BuildUnformatedPropertiesStringArr() ) && validBody;
 			validBody = m_currentTemplate.FillTemplateBody( TemplatesManager.TemplateGlobalsTag, ref shaderBody, m_currentDataCollector.UniformsList ) && validBody;
 			validBody = m_currentTemplate.FillTemplateBody( m_currentTemplate.VertexDataId, ref shaderBody, m_currentDataCollector.VertexInputList.ToArray() ) && validBody;
 			validBody = m_currentTemplate.FillTemplateBody( m_currentTemplate.InterpDataId, ref shaderBody, m_currentDataCollector.InterpolatorList.ToArray() ) && validBody;
+
+			if( m_currentTemplate.BlendData.ValidBlendMode )
+			{
+				validBody = m_currentTemplate.FillTemplateBody( m_currentTemplate.BlendData.BlendModeId, ref shaderBody, m_blendOpHelper.CurrentBlendFactor ) && validBody;
+			}
+
+			if( m_currentTemplate.BlendData.ValidBlendOp )
+			{
+				validBody = m_currentTemplate.FillTemplateBody( m_currentTemplate.BlendData.BlendOpId, ref shaderBody, m_blendOpHelper.CurrentBlendOp ) && validBody;
+			}
+
+			if( m_currentTemplate.BlendData.ValidAlphaToMask )
+			{
+				validBody = m_currentTemplate.FillTemplateBody( m_currentTemplate.BlendData.AlphaToMaskId, ref shaderBody, m_blendOpHelper.CurrentAlphaToMask ) && validBody;
+			}
+
+			if( m_currentTemplate.DepthData.ValidZWrite )
+			{
+				validBody = m_currentTemplate.FillTemplateBody( m_currentTemplate.DepthData.ZWriteModeId, ref shaderBody, m_depthOphelper.CurrentZWriteMode ) && validBody;
+			}
+
+			if( m_currentTemplate.DepthData.ValidZTest )
+			{
+				validBody = m_currentTemplate.FillTemplateBody( m_currentTemplate.DepthData.ZTestModeId, ref shaderBody, m_depthOphelper.CurrentZTestMode ) && validBody;
+			}
+
+			if( m_currentTemplate.DepthData.ValidOffset )
+			{
+				validBody = m_currentTemplate.FillTemplateBody( m_currentTemplate.DepthData.OffsetId, ref shaderBody, m_depthOphelper.CurrentOffset ) && validBody;
+			}
+
+			if( m_currentTemplate.CullModeData.DataCheck == TemplateDataCheck.Valid )
+			{
+				validBody = m_currentTemplate.FillTemplateBody( m_currentTemplate.CullModeData.CullModeId, ref shaderBody, m_cullModeHelper.GenerateShaderData(false) ) && validBody;
+			}
+
+			if( m_currentTemplate.ColorMaskData.DataCheck == TemplateDataCheck.Valid )
+			{
+				validBody = m_currentTemplate.FillTemplateBody( m_currentTemplate.ColorMaskData.ColorMaskId, ref shaderBody, m_colorMaskHelper.GenerateShaderData( false ) ) && validBody;
+			}
+
+			if( m_currentTemplate.StencilData.DataCheck == TemplateDataCheck.Valid )
+			{
+				CullMode cullMode = ( m_currentTemplate.CullModeData.DataCheck == TemplateDataCheck.Valid ) ? m_cullModeHelper.CurrentCullMode : CullMode.Back;
+				validBody = m_currentTemplate.FillTemplateBody( m_currentTemplate.StencilData.StencilBufferId, ref shaderBody, m_stencilBufferHelper.CreateStencilOp( cullMode ) ) && validBody;
+			}
+
+			if( m_currentTemplate.TagData.DataCheck == TemplateDataCheck.Valid )
+			{
+				validBody = m_currentTemplate.FillTemplateBody( m_currentTemplate.TagData.TagsId, ref shaderBody, m_tagsHelper.GenerateTags() ) && validBody;
+			}
 
 			if( m_currentDataCollector.TemplateDataCollectorInstance.HasVertexInputParams )
 			{
@@ -401,7 +556,7 @@ namespace AmplifyShaderEditor
 
 			m_currentTemplate.FillEmptyTags( ref shaderBody );
 
-			m_currentTemplate.InsertSnippets( ref shaderBody );
+			//m_currentTemplate.InsertSnippets( ref shaderBody );
 
 			vertexInstructions.Clear();
 			vertexInstructions = null;
@@ -427,19 +582,19 @@ namespace AmplifyShaderEditor
 
 				string templateGUID = GetCurrentParam( ref nodeParams );
 				string templateShaderName = string.Empty;
-				if(UIUtils.CurrentShaderVersion() > 13601 )
+				if( UIUtils.CurrentShaderVersion() > 13601 )
 				{
 					templateShaderName = GetCurrentParam( ref nodeParams );
 				}
-				
-				TemplateData template = TemplatesManager.GetTemplate( templateGUID );
+
+				TemplateData template = m_containerGraph.ParentWindow.TemplatesManagerInstance.GetTemplate( templateGUID ) as TemplateData;
 				if( template != null )
 				{
 					SetTemplate( template, false, true );
 				}
 				else
 				{
-					template = TemplatesManager.GetTemplateByName( templateShaderName );
+					template = m_containerGraph.ParentWindow.TemplatesManagerInstance.GetTemplateByName( templateShaderName ) as TemplateData;
 					if( template != null )
 					{
 						SetTemplate( template, false, true );
@@ -449,18 +604,71 @@ namespace AmplifyShaderEditor
 						m_masterNodeCategory = -1;
 					}
 				}
+
+				if( UIUtils.CurrentShaderVersion() > 13902 )
+				{
+					//BLEND MODULE
+					if( m_currentTemplate.BlendData.ValidBlendMode )
+					{
+						m_blendOpHelper.ReadBlendModeFromString( ref m_currentReadParamIdx, ref nodeParams );
+					}
+
+					if( m_currentTemplate.BlendData.ValidBlendOp )
+					{
+						m_blendOpHelper.ReadBlendOpFromString( ref m_currentReadParamIdx, ref nodeParams );
+					}
+
+					//CULL MODE
+					if( m_currentTemplate.CullModeData.DataCheck == TemplateDataCheck.Valid )
+					{
+						m_cullModeHelper.ReadFromString( ref m_currentReadParamIdx, ref nodeParams );
+					}
+
+					//COLOR MASK
+					if( m_currentTemplate.ColorMaskData.DataCheck == TemplateDataCheck.Valid )
+					{
+						m_colorMaskHelper.ReadFromString( ref m_currentReadParamIdx, ref nodeParams );
+					}
+
+					//STENCIL BUFFER
+					if( m_currentTemplate.StencilData.DataCheck == TemplateDataCheck.Valid )
+					{
+						m_stencilBufferHelper.ReadFromString( ref m_currentReadParamIdx, ref nodeParams );
+					}
+				}
+
+				if( UIUtils.CurrentShaderVersion() > 14202 )
+				{
+					//DEPTH OPTIONS
+					if( m_currentTemplate.DepthData.ValidZWrite )
+					{
+						m_depthOphelper.ReadZWriteFromString( ref m_currentReadParamIdx, ref nodeParams );
+					}
+
+					if( m_currentTemplate.DepthData.ValidZTest )
+					{
+						m_depthOphelper.ReadZTestFromString( ref m_currentReadParamIdx, ref nodeParams );
+					}
+
+					if( m_currentTemplate.DepthData.ValidOffset )
+					{
+						m_depthOphelper.ReadOffsetFromString( ref m_currentReadParamIdx, ref nodeParams );
+					}
+				}
+
+				//TAGS
+				if( UIUtils.CurrentShaderVersion() > 14301 )
+				{
+					if( m_currentTemplate.TagData.DataCheck == TemplateDataCheck.Valid )
+						m_tagsHelper.ReadFromString( ref m_currentReadParamIdx, ref nodeParams );
+				}
 			}
 			catch( Exception e )
 			{
 				Debug.LogException( e, this );
 			}
 			m_containerGraph.CurrentCanvasMode = NodeAvailability.TemplateShader;
-		}
-
-		public override void Destroy()
-		{
-			base.Destroy();
-			m_currentTemplate = null;
+			m_containerGraph.CurrentPrecision = m_currentPrecisionType;
 		}
 
 		public override void WriteToString( ref string nodeInfo, ref string connectionsInfo )
@@ -469,6 +677,72 @@ namespace AmplifyShaderEditor
 			IOUtils.AddFieldValueToString( ref nodeInfo, m_shaderName );
 			IOUtils.AddFieldValueToString( ref nodeInfo, ( m_currentTemplate != null ) ? m_currentTemplate.GUID : string.Empty );
 			IOUtils.AddFieldValueToString( ref nodeInfo, ( m_currentTemplate != null ) ? m_currentTemplate.DefaultShaderName : string.Empty );
+
+			//BLEND MODULE
+			if( m_currentTemplate.BlendData.ValidBlendMode )
+			{
+				m_blendOpHelper.WriteBlendModeToString( ref nodeInfo );
+			}
+
+			if( m_currentTemplate.BlendData.ValidBlendOp )
+			{
+				m_blendOpHelper.WriteBlendOpToString( ref nodeInfo );
+			}
+
+			//CULL MODULE
+			if( m_currentTemplate.CullModeData.DataCheck == TemplateDataCheck.Valid )
+			{
+				m_cullModeHelper.WriteToString( ref nodeInfo );
+			}
+
+			//COLOR MASK MODULE
+			if( m_currentTemplate.ColorMaskData.DataCheck == TemplateDataCheck.Valid )
+			{
+				m_colorMaskHelper.WriteToString( ref nodeInfo );
+			}
+
+			//STENCIL BUFFER MODULE
+			if( m_currentTemplate.StencilData.DataCheck == TemplateDataCheck.Valid )
+			{
+				m_stencilBufferHelper.WriteToString( ref nodeInfo );
+			}
+
+			//DEPTH MODULE
+			if( m_currentTemplate.DepthData.ValidZWrite )
+			{
+				m_depthOphelper.WriteZWriteToString( ref nodeInfo );
+			}
+
+			if( m_currentTemplate.DepthData.ValidZTest )
+			{
+				m_depthOphelper.WriteZTestToString( ref nodeInfo );
+			}
+
+			if( m_currentTemplate.DepthData.ValidOffset )
+			{
+				m_depthOphelper.WriteOffsetToString( ref nodeInfo );
+			}
+
+			//TAGS
+			if( m_currentTemplate.TagData.DataCheck == TemplateDataCheck.Valid )
+			{
+				m_tagsHelper.WriteToString( ref nodeInfo );
+			}
+		}
+
+		public override void Destroy()
+		{
+			base.Destroy();
+			m_currentTemplate = null;
+			m_blendOpHelper = null;
+			m_cullModeHelper = null;
+			m_colorMaskHelper.Destroy();
+			m_colorMaskHelper = null;
+			m_stencilBufferHelper.Destroy();
+			m_stencilBufferHelper = null;
+			m_tagsHelper.Destroy();
+			m_tagsHelper = null;
+
 		}
 
 		public TemplateData CurrentTemplate { get { return m_currentTemplate; } }

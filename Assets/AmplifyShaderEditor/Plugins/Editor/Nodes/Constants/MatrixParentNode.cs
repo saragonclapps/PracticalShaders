@@ -1,14 +1,26 @@
 // Amplify Shader Editor - Visual Shader Editing Tool
 // Copyright (c) Amplify Creations, Lda <info@amplify.pt>
 using System;
+using UnityEngine;
 
 namespace AmplifyShaderEditor
 {
 	[Serializable]
 	public class MatrixParentNode : PropertyNode
 	{
-		private readonly string[] AvailablePropertyTypeLabels = { PropertyType.Constant.ToString(), PropertyType.Global.ToString() };
-		private readonly int[] AvailablePropertyTypeValues = { (int)PropertyType.Constant, (int)PropertyType.Global };
+		private readonly string[] AvailablePropertyTypeLabels = { PropertyType.Constant.ToString(), PropertyType.Global.ToString(), "Instanced" };
+		private readonly int[] AvailablePropertyTypeValues = { (int)PropertyType.Constant, (int)PropertyType.Global , (int)PropertyType.InstancedProperty };
+
+		protected bool m_isEditingFields;
+
+		[SerializeField]
+		protected Matrix4x4 m_defaultValue = Matrix4x4.identity;
+
+		[SerializeField]
+		protected Matrix4x4 m_materialValue = Matrix4x4.identity;
+
+		[NonSerialized]
+		protected Matrix4x4 m_previousValue;
 
 		private UpperLeftWidgetHelper m_upperLeftWidget = new UpperLeftWidgetHelper();
 
@@ -19,7 +31,7 @@ namespace AmplifyShaderEditor
 		{
 			base.CommonInit( uniqueId );
 			m_freeType = false;
-
+			m_showVariableMode = true;
 		}
 
 		public override void AfterCommonInit()
@@ -67,5 +79,8 @@ namespace AmplifyShaderEditor
 			base.Destroy();
 			m_upperLeftWidget = null;
 		}
+
+		public override void SetGlobalValue() { Shader.SetGlobalMatrix( m_propertyName, m_defaultValue ); }
+		public override void FetchGlobalValue() { m_materialValue = Shader.GetGlobalMatrix( m_propertyName ); }
 	}
 }

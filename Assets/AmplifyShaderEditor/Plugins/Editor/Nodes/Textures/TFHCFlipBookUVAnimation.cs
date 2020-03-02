@@ -41,7 +41,9 @@ namespace AmplifyShaderEditor
 			AddInputPort( WirePortDataType.FLOAT, false, "Rows" );
 			AddInputPort( WirePortDataType.FLOAT, false, "Speed" );
 			AddInputPort( WirePortDataType.FLOAT, false, "Start Frame" );
-			AddOutputVectorPorts( WirePortDataType.FLOAT2, "UV" );
+            AddInputPort( WirePortDataType.FLOAT, false, "Time" );
+
+            AddOutputVectorPorts( WirePortDataType.FLOAT2, "UV" );
 			m_outputPorts[ 1 ].Name = "U";
 			m_outputPorts[ 2 ].Name = "V";
 			m_textLabelWidth = 125;
@@ -50,8 +52,25 @@ namespace AmplifyShaderEditor
 			m_previewShaderGUID = "04fe24be792bfd5428b92132d7cf0f7d";
 		}
 
+        public override void OnInputPortConnected( int portId, int otherNodeId, int otherPortId, bool activateNode = true )
+        {
+            base.OnInputPortConnected( portId, otherNodeId, otherPortId, activateNode );
+            if( portId == 5 )
+            {
+                m_previewMaterialPassId = 1;
+            }
+        }
 
-		public override void DrawProperties()
+        public override void OnInputPortDisconnected( int portId )
+        {
+            base.OnInputPortDisconnected( portId );
+            if( portId == 5 )
+            {
+                m_previewMaterialPassId = 0;
+            }
+        }
+
+        public override void DrawProperties()
 		{
 			base.DrawProperties();
 			EditorGUILayout.BeginVertical();
@@ -82,9 +101,12 @@ namespace AmplifyShaderEditor
 			//  round( fmod( x, y ) ) can be replaced with a faster
 			//  floor( frac( x / y ) * y + 0.5 ) => div can be muls with 1/y, almost always static/constant
 			//
+			if( m_outputPorts[ 0 ].IsLocalValue( dataCollector.PortCategory ) )
+				return GetOutputVectorItem( 0, outputId, m_outputPorts[ 0 ].LocalValue( dataCollector.PortCategory ) );
 
 			string uv = m_inputPorts[ 0 ].GeneratePortInstructions( ref dataCollector );
 			string columns = m_inputPorts[ 1 ].GeneratePortInstructions( ref dataCollector );
+
 			if ( !m_inputPorts[ 1 ].IsConnected )
 				columns = ( float.Parse( columns ) == 0f ? "1" : columns );
 
@@ -92,9 +114,9 @@ namespace AmplifyShaderEditor
 			if ( !m_inputPorts[ 2 ].IsConnected )
 				rows = ( float.Parse( rows ) == 0f ? "1" : rows );
 
-
 			string speed = m_inputPorts[ 3 ].GeneratePortInstructions( ref dataCollector );
 			string startframe = m_inputPorts[ 4 ].GeneratePortInstructions( ref dataCollector );
+            string timer = m_inputPorts[ 5 ].IsConnected ? m_inputPorts[ 5 ].GeneratePortInstructions( ref dataCollector ) : "_Time[ 1 ]";
 
 			string vcomment1 = "// *** BEGIN Flipbook UV Animation vars ***";
 			string vcomment2 = "// Total tiles of Flipbook Texture";
@@ -103,7 +125,8 @@ namespace AmplifyShaderEditor
 			string vcolsoffset = "float fbcolsoffset" + OutputId + " = 1.0f / " + columns + ";";
 			string vrowssoffset = "float fbrowsoffset" + OutputId + " = 1.0f / " + rows + ";";
 			string vcomment4 = "// Speed of animation";
-			string vspeed = "float fbspeed" + OutputId + " = _Time[1] * " + speed + ";";
+
+            string vspeed = string.Format(  "float fbspeed{0} = {1} * {2};", OutputId,timer,speed);
 			string vcomment5 = "// UV Tiling (col and row offset)";
 			string vtiling = "float2 fbtiling" + OutputId + " = float2(fbcolsoffset" + OutputId + ", fbrowsoffset" + OutputId + ");";
 			string vcomment6 = "// UV Offset - calculate current tile linear index, and convert it to (X * coloffset, Y * rowoffset)";
@@ -168,43 +191,45 @@ namespace AmplifyShaderEditor
 			string vcomment16 = "// *** END Flipbook UV Animation vars ***";
 			string result = "fbuv" + OutputId;
 
-			dataCollector.AddToLocalVariables( UniqueId, vcomment1 );
-			dataCollector.AddToLocalVariables( UniqueId, vcomment2 );
-			dataCollector.AddToLocalVariables( UniqueId, vtotaltiles );
-			dataCollector.AddToLocalVariables( UniqueId, vcomment3 );
-			dataCollector.AddToLocalVariables( UniqueId, vcolsoffset );
-			dataCollector.AddToLocalVariables( UniqueId, vrowssoffset );
-			dataCollector.AddToLocalVariables( UniqueId, vcomment4 );
-			dataCollector.AddToLocalVariables( UniqueId, vspeed );
-			dataCollector.AddToLocalVariables( UniqueId, vcomment5 );
-			dataCollector.AddToLocalVariables( UniqueId, vtiling );
-			dataCollector.AddToLocalVariables( UniqueId, vcomment6 );
-			dataCollector.AddToLocalVariables( UniqueId, vcomment7 );
-			dataCollector.AddToLocalVariables( UniqueId, vcurrenttileindex );
-			dataCollector.AddToLocalVariables( UniqueId, vcurrenttileindex1 );
-			dataCollector.AddToLocalVariables( UniqueId, vcomment8 );
-			dataCollector.AddToLocalVariables( UniqueId, voffsetx1 );
+			dataCollector.AddLocalVariable( UniqueId, vcomment1 );
+			dataCollector.AddLocalVariable( UniqueId, vcomment2 );
+			dataCollector.AddLocalVariable( UniqueId, vtotaltiles );
+			dataCollector.AddLocalVariable( UniqueId, vcomment3 );
+			dataCollector.AddLocalVariable( UniqueId, vcolsoffset );
+			dataCollector.AddLocalVariable( UniqueId, vrowssoffset );
+			dataCollector.AddLocalVariable( UniqueId, vcomment4 );
+			dataCollector.AddLocalVariable( UniqueId, vspeed );
+			dataCollector.AddLocalVariable( UniqueId, vcomment5 );
+			dataCollector.AddLocalVariable( UniqueId, vtiling );
+			dataCollector.AddLocalVariable( UniqueId, vcomment6 );
+			dataCollector.AddLocalVariable( UniqueId, vcomment7 );
+			dataCollector.AddLocalVariable( UniqueId, vcurrenttileindex );
+			dataCollector.AddLocalVariable( UniqueId, vcurrenttileindex1 );
+			dataCollector.AddLocalVariable( UniqueId, vcomment8 );
+			dataCollector.AddLocalVariable( UniqueId, voffsetx1 );
 			if ( m_negativeSpeedBehavior != 0 )
 			{
-				dataCollector.AddToLocalVariables( UniqueId, vcomment9 );
-				dataCollector.AddToLocalVariables( UniqueId, voffsetx2 );
+				dataCollector.AddLocalVariable( UniqueId, vcomment9 );
+				dataCollector.AddLocalVariable( UniqueId, voffsetx2 );
 			}
-			dataCollector.AddToLocalVariables( UniqueId, vcomment10 );
-			dataCollector.AddToLocalVariables( UniqueId, voffsetx3 );
-			dataCollector.AddToLocalVariables( UniqueId, vcomment11 );
-			dataCollector.AddToLocalVariables( UniqueId, voffsety1 );
+			dataCollector.AddLocalVariable( UniqueId, vcomment10 );
+			dataCollector.AddLocalVariable( UniqueId, voffsetx3 );
+			dataCollector.AddLocalVariable( UniqueId, vcomment11 );
+			dataCollector.AddLocalVariable( UniqueId, voffsety1 );
 			if ( m_selectedTextureVerticalDirection == 0 || m_negativeSpeedBehavior != 0 )
 			{
-				dataCollector.AddToLocalVariables( UniqueId, vcomment12 );
-				dataCollector.AddToLocalVariables( UniqueId, voffsety2 );
+				dataCollector.AddLocalVariable( UniqueId, vcomment12 );
+				dataCollector.AddLocalVariable( UniqueId, voffsety2 );
 			}
-			dataCollector.AddToLocalVariables( UniqueId, vcomment13 );
-			dataCollector.AddToLocalVariables( UniqueId, voffsety3 );
-			dataCollector.AddToLocalVariables( UniqueId, vcomment14 );
-			dataCollector.AddToLocalVariables( UniqueId, voffset );
-			dataCollector.AddToLocalVariables( UniqueId, vcomment15 );
-			dataCollector.AddToLocalVariables( UniqueId, vfbuv );
-			dataCollector.AddToLocalVariables( UniqueId, vcomment16 );
+			dataCollector.AddLocalVariable( UniqueId, vcomment13 );
+			dataCollector.AddLocalVariable( UniqueId, voffsety3 );
+			dataCollector.AddLocalVariable( UniqueId, vcomment14 );
+			dataCollector.AddLocalVariable( UniqueId, voffset );
+			dataCollector.AddLocalVariable( UniqueId, vcomment15 );
+			dataCollector.AddLocalVariable( UniqueId, vfbuv );
+			dataCollector.AddLocalVariable( UniqueId, vcomment16 );
+
+			m_outputPorts[ 0 ].SetLocalValue( result, dataCollector.PortCategory );
 
 			return GetOutputVectorItem( 0, outputId, result );
 

@@ -11,30 +11,18 @@ namespace AmplifyShaderEditor
 	[NodeAttributes( "Matrix3X3", "Constants And Properties", "Matrix3X3 property" )]
 	public sealed class Matrix3X3Node : MatrixParentNode
 	{
-		[SerializeField]
-		private Matrix4x4 m_defaultValue = Matrix4x4.identity;
-
-		[SerializeField]
-		private Matrix4x4 m_materialValue = Matrix4x4.identity;
-
-		private bool m_isEditingFields;
-
-		[NonSerialized]
-		private Matrix4x4 m_previousValue;
-
 		private string[,] m_fieldText = new string[ 3, 3 ] { { "0", "0", "0" }, { "0", "0", "0" }, { "0", "0", "0" } };
-
 		public Matrix3X3Node() : base() { }
 		public Matrix3X3Node( int uniqueId, float x, float y, float width, float height ) : base( uniqueId, x, y, width, height ) { }
 		protected override void CommonInit( int uniqueId )
 		{
 			base.CommonInit( uniqueId );
+			GlobalTypeWarningText = string.Format( GlobalTypeWarningText, "Matrix" );
 			AddOutputPort( WirePortDataType.FLOAT3x3, Constants.EmptyPortValue );
 			m_insideSize.Set( Constants.FLOAT_DRAW_WIDTH_FIELD_SIZE * 3 + Constants.FLOAT_WIDTH_SPACING * 2, Constants.FLOAT_DRAW_HEIGHT_FIELD_SIZE * 3 + Constants.FLOAT_WIDTH_SPACING * 2 + Constants.OUTSIDE_WIRE_MARGIN );
 			//m_defaultValue = new Matrix4x4();
 			//m_materialValue = new Matrix4x4();
 			m_drawPreview = false;
-			m_precisionString = UIUtils.FinalPrecisionWirePortToCgType( m_currentPrecisionType, m_outputPorts[ 0 ].DataType );
 		}
 
 		public override void CopyDefaultsToMaterial()
@@ -116,7 +104,7 @@ namespace AmplifyShaderEditor
 			if( !m_isVisible )
 				return;
 
-			if( m_isEditingFields )
+			if( m_isEditingFields && m_currentParameterType != PropertyType.Global )
 			{
 				bool currMode = m_materialMode && m_currentParameterType != PropertyType.Constant;
 				Matrix4x4 value = currMode ? m_materialValue : m_defaultValue;
@@ -148,6 +136,9 @@ namespace AmplifyShaderEditor
 			}
 			else if( drawInfo.CurrentEventType == EventType.Repaint )
 			{
+				bool guiEnabled = GUI.enabled;
+				GUI.enabled = m_currentParameterType != PropertyType.Global;
+
 				bool currMode = m_materialMode && m_currentParameterType != PropertyType.Constant;
 				Matrix4x4 value = currMode ? m_materialValue : m_defaultValue;
 				for( int row = 0; row < 3; row++ )
@@ -156,7 +147,8 @@ namespace AmplifyShaderEditor
 					{
 						Rect fakeField = m_propertyDrawPos;
 						fakeField.position = m_remainingBox.position + Vector2.Scale( m_propertyDrawPos.size, new Vector2( column, row ) ) + new Vector2( Constants.FLOAT_WIDTH_SPACING * drawInfo.InvertedZoom * column, Constants.FLOAT_WIDTH_SPACING * drawInfo.InvertedZoom * row );
-						EditorGUIUtility.AddCursorRect( fakeField, MouseCursor.Text );
+						if( GUI.enabled )
+							EditorGUIUtility.AddCursorRect( fakeField, MouseCursor.Text );
 
 						if( m_previousValue[ row, column ] != value[ row, column ] )
 						{
@@ -167,19 +159,20 @@ namespace AmplifyShaderEditor
 						GUI.Label( fakeField, m_fieldText[ row, column ], UIUtils.MainSkin.textField );
 					}
 				}
+				GUI.enabled = guiEnabled;
 			}
 		}
 
 		public override string GenerateShaderForOutput( int outputId, ref MasterNodeDataCollector dataCollector, bool ignoreLocalvar )
 		{
 			base.GenerateShaderForOutput( outputId, ref dataCollector, ignoreLocalvar );
-			m_precisionString = UIUtils.FinalPrecisionWirePortToCgType( m_currentPrecisionType, m_outputPorts[ 0 ].DataType );
+			m_precisionString = UIUtils.PrecisionWirePortToCgType( CurrentPrecisionType, m_outputPorts[ 0 ].DataType );
 			if( m_currentParameterType != PropertyType.Constant )
 			{
-				if( m_outputPorts[ 0 ].IsLocalValue )
-					return m_outputPorts[ 0 ].LocalValue;
-				string localVarName = PropertyData + "Local3x3";
-				string localVarValue = string.Format( "float3x3({0}._m00,{0}._m01,{0}._m02,{0}._m10,{0}._m11,{0}._m12,{0}._m20,{0}._m21,{0}._m22 )", PropertyData );
+				if( m_outputPorts[ 0 ].IsLocalValue( dataCollector.PortCategory ) )
+					return m_outputPorts[ 0 ].LocalValue( dataCollector.PortCategory );
+				string localVarName = PropertyData( dataCollector.PortCategory ) + "Local3x3";
+				string localVarValue = string.Format( "float3x3({0}._m00,{0}._m01,{0}._m02,{0}._m10,{0}._m11,{0}._m12,{0}._m20,{0}._m21,{0}._m22 )", PropertyData( dataCollector.PortCategory ) );
 				RegisterLocalVariable( 0, localVarValue, ref dataCollector, localVarName );
 				return localVarName;
 			}
@@ -203,9 +196,9 @@ namespace AmplifyShaderEditor
 			}
 		}
 
-		public override bool GetUniformData( out string dataType, out string dataName )
+		public override bool GetUniformData( out string dataType, out string dataName, ref bool fullValue )
 		{
-			dataType = UIUtils.FinalPrecisionWirePortToCgType( m_currentPrecisionType, WirePortDataType.FLOAT4x4 );
+			dataType = UIUtils.PrecisionWirePortToCgType( CurrentPrecisionType, WirePortDataType.FLOAT4x4 );
 			dataName = m_propertyName;
 			return true;
 		}
@@ -222,41 +215,23 @@ namespace AmplifyShaderEditor
 		public override void ForceUpdateFromMaterial( Material material )
 		{
 			if( UIUtils.IsProperty( m_currentParameterType ) && material.HasProperty( m_propertyName ) )
+			{
 				m_materialValue = material.GetMatrix( m_propertyName );
+				PreviewIsDirty = true;
+			}
 		}
 
 
 		public override void ReadFromString( ref string[] nodeParams )
 		{
 			base.ReadFromString( ref nodeParams );
-			string[] matrixVals = GetCurrentParam( ref nodeParams ).Split( IOUtils.VECTOR_SEPARATOR );
-			if( matrixVals.Length == 9 )
-			{
-				m_defaultValue[ 0, 0 ] = Convert.ToSingle( matrixVals[ 0 ] );
-				m_defaultValue[ 0, 1 ] = Convert.ToSingle( matrixVals[ 1 ] );
-				m_defaultValue[ 0, 2 ] = Convert.ToSingle( matrixVals[ 2 ] );
-
-				m_defaultValue[ 1, 0 ] = Convert.ToSingle( matrixVals[ 3 ] );
-				m_defaultValue[ 1, 1 ] = Convert.ToSingle( matrixVals[ 4 ] );
-				m_defaultValue[ 1, 2 ] = Convert.ToSingle( matrixVals[ 5 ] );
-
-				m_defaultValue[ 2, 0 ] = Convert.ToSingle( matrixVals[ 6 ] );
-				m_defaultValue[ 2, 1 ] = Convert.ToSingle( matrixVals[ 7 ] );
-				m_defaultValue[ 2, 2 ] = Convert.ToSingle( matrixVals[ 8 ] );
-			}
-			else
-			{
-				UIUtils.ShowMessage( "Incorrect number of matrix4x4 values", MessageSeverity.Error );
-			}
+			m_defaultValue = IOUtils.StringToMatrix3x3( GetCurrentParam( ref nodeParams ) );
 		}
 
 		public override void WriteToString( ref string nodeInfo, ref string connectionsInfo )
 		{
 			base.WriteToString( ref nodeInfo, ref connectionsInfo );
-
-			IOUtils.AddFieldValueToString( ref nodeInfo, m_defaultValue[ 0, 0 ].ToString() + IOUtils.VECTOR_SEPARATOR + m_defaultValue[ 0, 1 ].ToString() + IOUtils.VECTOR_SEPARATOR + m_defaultValue[ 0, 2 ].ToString() + IOUtils.VECTOR_SEPARATOR +
-												m_defaultValue[ 1, 0 ].ToString() + IOUtils.VECTOR_SEPARATOR + m_defaultValue[ 1, 1 ].ToString() + IOUtils.VECTOR_SEPARATOR + m_defaultValue[ 1, 2 ].ToString() + IOUtils.VECTOR_SEPARATOR +
-												m_defaultValue[ 2, 0 ].ToString() + IOUtils.VECTOR_SEPARATOR + m_defaultValue[ 2, 1 ].ToString() + IOUtils.VECTOR_SEPARATOR + m_defaultValue[ 2, 2 ].ToString() );
+			IOUtils.AddFieldValueToString( ref nodeInfo, IOUtils.Matrix3x3ToString( m_defaultValue ) );
 		}
 
 		public override void ReadAdditionalClipboardData( ref string[] nodeParams )

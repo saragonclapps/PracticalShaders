@@ -16,6 +16,7 @@ namespace AmplifyShaderEditor
 			AddInputPort( WirePortDataType.FLOAT, false, Constants.EmptyPortValue );
 			AddInputPort( WirePortDataType.FLOAT, false, "Min" );
 			AddInputPort( WirePortDataType.FLOAT, false, "Max" );
+			m_inputPorts[ m_inputPorts.Count - 1 ].FloatInternalData = 1;
 			AddOutputPort( WirePortDataType.FLOAT, Constants.EmptyPortValue );
 			m_useInternalPortData = true;
 			m_textLabelWidth = 55;
@@ -53,8 +54,8 @@ namespace AmplifyShaderEditor
 
 		public override string GenerateShaderForOutput( int outputId, ref MasterNodeDataCollector dataCollector, bool ignoreLocalVar )
 		{
-			if ( m_outputPorts[ 0 ].IsLocalValue )
-				return m_outputPorts[ 0 ].LocalValue;
+			if ( m_outputPorts[ 0 ].IsLocalValue( dataCollector.PortCategory ) )
+				return m_outputPorts[ 0 ].LocalValue( dataCollector.PortCategory );
 
 			WirePortDataType valueType = m_inputPorts[ 0 ].ConnectionType();
 			WirePortDataType minType = m_inputPorts[ 1 ].ConnectionType();
@@ -64,13 +65,13 @@ namespace AmplifyShaderEditor
 			string min = m_inputPorts[ 1 ].GeneratePortInstructions( ref dataCollector );
 			if ( minType != valueType )
 			{
-				min = UIUtils.CastPortType( ref dataCollector, m_currentPrecisionType, new NodeCastInfo( UniqueId, outputId ), null, m_inputPorts[ 1 ].DataType, m_inputPorts[ 0 ].DataType, min );
+				min = UIUtils.CastPortType( ref dataCollector, CurrentPrecisionType, new NodeCastInfo( UniqueId, outputId ), null, m_inputPorts[ 1 ].DataType, m_inputPorts[ 0 ].DataType, min );
 			}
 
 			string max = m_inputPorts[ 2 ].GeneratePortInstructions( ref dataCollector );
 			if ( maxType != valueType )
 			{
-				max = UIUtils.CastPortType( ref dataCollector, m_currentPrecisionType, new NodeCastInfo( UniqueId, outputId ), null, m_inputPorts[ 2 ].DataType, m_inputPorts[ 0 ].DataType, max );
+				max = UIUtils.CastPortType( ref dataCollector, CurrentPrecisionType, new NodeCastInfo( UniqueId, outputId ), null, m_inputPorts[ 2 ].DataType, m_inputPorts[ 0 ].DataType, max );
 			}
 
 			string result = string.Empty;
@@ -95,7 +96,7 @@ namespace AmplifyShaderEditor
 			}
 
 			RegisterLocalVariable( 0, result, ref dataCollector, "clampResult" + OutputId );
-			return m_outputPorts[ 0 ].LocalValue;
+			return m_outputPorts[ 0 ].LocalValue( dataCollector.PortCategory );
 		}
 
 	}

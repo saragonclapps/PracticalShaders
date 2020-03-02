@@ -16,28 +16,28 @@ namespace AmplifyShaderEditor
 			m_drawPreviewAsSphere = true;
 			m_previewShaderGUID = "6b24b06c33f9fe84c8a2393f13ab5406";
 		}
-		
+
 		public override string GenerateShaderForOutput( int outputId, ref MasterNodeDataCollector dataCollector, bool ignoreLocalVar )
 		{
 			string vertexNormal = string.Empty;
 
-			if ( dataCollector.MasterNodeCategory == AvailableShaderTypes.Template )
+			if( dataCollector.MasterNodeCategory == AvailableShaderTypes.Template )
 			{
-				vertexNormal = dataCollector.TemplateDataCollectorInstance.GetVertexNormal();
+				vertexNormal = dataCollector.TemplateDataCollectorInstance.GetVertexNormal( CurrentPrecisionType );
 				return GetOutputVectorItem( 0, outputId, vertexNormal );
 			}
 
-			if ( dataCollector.PortCategory == MasterNodePortCategory.Fragment || dataCollector.PortCategory == MasterNodePortCategory.Debug )
+			if( dataCollector.PortCategory == MasterNodePortCategory.Fragment || dataCollector.PortCategory == MasterNodePortCategory.Debug )
 			{
-				dataCollector.AddToInput( UniqueId, UIUtils.GetInputDeclarationFromType( m_currentPrecisionType, AvailableSurfaceInputs.WORLD_NORMAL ), true );
+				dataCollector.AddToInput( UniqueId, SurfaceInputs.WORLD_NORMAL, CurrentPrecisionType );
 				if( dataCollector.DirtyNormal )
 				{
-					dataCollector.AddToInput( UniqueId, Constants.InternalData, false );
+					dataCollector.AddToInput( UniqueId, SurfaceInputs.INTERNALDATA, addSemiColon: false );
 					dataCollector.ForceNormal = true;
 				}
 			}
 
-			vertexNormal = GeneratorUtils.GenerateVertexNormal( ref dataCollector, UniqueId, m_currentPrecisionType );
+			vertexNormal = GeneratorUtils.GenerateVertexNormal( ref dataCollector, UniqueId, CurrentPrecisionType );
 			return GetOutputVectorItem( 0, outputId, vertexNormal );
 		}
 	}

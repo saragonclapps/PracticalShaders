@@ -60,11 +60,11 @@ namespace AmplifyShaderEditor
 		{
 			base.GenerateShaderForOutput( outputId, ref dataCollector, ignoreLocalvar );
 
-			string textcoords = m_inputPorts[ 0 ].GenerateShaderForOutput( ref dataCollector, WirePortDataType.FLOAT2, false, true );
-			string height = m_inputPorts[ 1 ].GenerateShaderForOutput( ref dataCollector, WirePortDataType.FLOAT, false, true );
-			string scale = m_inputPorts[ 2 ].GenerateShaderForOutput( ref dataCollector, WirePortDataType.FLOAT, false, true );
-			string viewDirTan = m_inputPorts[ 3 ].GenerateShaderForOutput( ref dataCollector, WirePortDataType.FLOAT3, false, true );
-			string localVarName = "Offset" + UniqueId;
+			string textcoords = m_inputPorts[ 0 ].GeneratePortInstructions( ref dataCollector );
+			string height = m_inputPorts[ 1 ].GeneratePortInstructions( ref dataCollector );
+			string scale = m_inputPorts[ 2 ].GeneratePortInstructions( ref dataCollector );
+			string viewDirTan = m_inputPorts[ 3 ].GeneratePortInstructions( ref dataCollector );
+			string localVarName = "Offset" + OutputId;
 			string calculation = "";
 
 			switch( m_selectedParallaxType )
@@ -78,7 +78,8 @@ namespace AmplifyShaderEditor
 				break;
 			}
 
-			dataCollector.AddToLocalVariables( UniqueId, m_currentPrecisionType, m_outputPorts[ 0 ].DataType, localVarName, calculation );
+			dataCollector.AddLocalVariable( UniqueId, CurrentPrecisionType, m_outputPorts[ 0 ].DataType, localVarName, calculation );
+			//dataCollector.AddToLocalVariables( UniqueId, m_currentPrecisionType, m_outputPorts[ 0 ].DataType, localVarName, calculation );
 			return GetOutputVectorItem( 0, outputId, localVarName );
 		}
 

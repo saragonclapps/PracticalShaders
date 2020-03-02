@@ -1,4 +1,4 @@
-// Amplify Shader Editor - Advanced Bloom Post-Effect for Unity
+// Amplify Shader Editor - Visual Shader Editing Tool
 // Copyright (c) Amplify Creations, Lda <info@amplify.pt>
 
 using System;
@@ -79,16 +79,26 @@ namespace AmplifyShaderEditor
 		{
 			if( dataCollector.IsFragmentCategory )
 			{
-				UIUtils.ShowMessage( ErrorMessage );
-				return "0";
+				UIUtils.ShowMessage( UniqueId, ErrorMessage,MessageSeverity.Error );
+				return m_outputPorts[0].ErrorValue;
 			}
-			if( m_outputPorts[ 0 ].IsLocalValue )
-				return "0";
+			if( m_outputPorts[ 0 ].IsLocalValue( dataCollector.PortCategory ) )
+				return m_outputPorts[ 0 ].ErrorValue;
 
-			m_outputPorts[ 0 ].SetLocalValue( "0" );
-			string vertexPosValue = dataCollector.IsTemplate ? dataCollector.TemplateDataCollectorInstance.GetVertexPosition( WirePortDataType.FLOAT4 ) : "v.vertex";
-			string vertexNormalValue = dataCollector.IsTemplate ? dataCollector.TemplateDataCollectorInstance.GetVertexNormal() : "v.normal";
-			BillboardOpHelper.FillDataCollector( ref dataCollector, m_billboardType, m_rotationIndependent, vertexPosValue, vertexNormalValue, false );
+			m_outputPorts[ 0 ].SetLocalValue( "0", dataCollector.PortCategory );
+			string vertexPosValue = dataCollector.IsTemplate ? dataCollector.TemplateDataCollectorInstance.GetVertexPosition( WirePortDataType.OBJECT, CurrentPrecisionType ) : "v.vertex";
+			string vertexNormalValue = dataCollector.IsTemplate ? dataCollector.TemplateDataCollectorInstance.GetVertexNormal( CurrentPrecisionType ) : "v.normal";
+			bool vertexIsFloat3 = false;
+			if( dataCollector.IsTemplate )
+			{
+				InterpDataHelper info = dataCollector.TemplateDataCollectorInstance.GetInfo( TemplateInfoOnSematics.POSITION );
+				if( info != null )
+				{
+					vertexIsFloat3 = info.VarType == WirePortDataType.FLOAT3;
+				}
+			}
+
+			BillboardOpHelper.FillDataCollector( ref dataCollector, m_billboardType, m_rotationIndependent, vertexPosValue, vertexNormalValue, vertexIsFloat3 );
 
 			return "0";
 		}

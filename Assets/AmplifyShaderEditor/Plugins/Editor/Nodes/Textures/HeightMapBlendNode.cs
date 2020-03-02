@@ -24,12 +24,13 @@ namespace AmplifyShaderEditor
 			m_textLabelWidth = 120;
 			m_useInternalPortData = true;
 			m_inputPorts[ 2 ].FloatInternalData = 1;
+			m_previewShaderGUID = "b2ac23d6d5dcb334982b6f31c2e7a734";
 		}
 
 		public override string GenerateShaderForOutput( int outputId, ref MasterNodeDataCollector dataCollector, bool ignoreLocalvar )
 		{
-			if ( m_outputPorts[ 0 ].IsLocalValue )
-				return m_outputPorts[ 0 ].LocalValue;
+			if ( m_outputPorts[ 0 ].IsLocalValue( dataCollector.PortCategory ) )
+				return m_outputPorts[ 0 ].LocalValue( dataCollector.PortCategory );
 
 			string HeightMap = m_inputPorts[ 0 ].GeneratePortInstructions( ref dataCollector );
 			string SplatMask = m_inputPorts[ 1 ].GeneratePortInstructions( ref dataCollector);
@@ -39,7 +40,7 @@ namespace AmplifyShaderEditor
 			string varName = "HeightMask" + OutputId;
 
 			RegisterLocalVariable( 0, HeightMask, ref dataCollector , varName );
-			return m_outputPorts[ 0 ].LocalValue;
+			return m_outputPorts[ 0 ].LocalValue( dataCollector.PortCategory );
 		}
 		/*
          A = (heightMap * SplatMask)*4

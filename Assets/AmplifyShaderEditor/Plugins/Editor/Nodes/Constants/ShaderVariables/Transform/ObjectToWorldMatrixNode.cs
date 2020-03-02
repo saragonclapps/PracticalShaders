@@ -11,11 +11,9 @@ namespace AmplifyShaderEditor
 		{
 			base.CommonInit( uniqueId );
 			ChangeOutputProperties( 0, "Out", WirePortDataType.FLOAT4x4 );
-#if UNITY_5_4_OR_NEWER
             m_value = "unity_ObjectToWorld";
-#else
-            m_value = "_Object2World";
-#endif
+			m_HDValue = "GetObjectToWorldMatrix()";
+			m_LWValue = "GetObjectToWorldMatrix()"; 
 		}
     }
 }

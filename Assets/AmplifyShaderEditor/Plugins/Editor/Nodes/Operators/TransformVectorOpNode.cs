@@ -11,8 +11,11 @@ namespace AmplifyShaderEditor
 		Tangent,
 		Local,
 		World,
-		View
+		View,
+		Clip,
+		Screen
 	}
+
 	[Serializable]
 	[NodeAttributes( "Transform Vector", "Math Operators", "Transforma a vector into another", null, KeyCode.None, false )]
 	public sealed class TransformVectorOpNode : ParentNode
@@ -48,6 +51,7 @@ namespace AmplifyShaderEditor
 
 		public override string GenerateShaderForOutput( int outputId,  ref MasterNodeDataCollector dataCollector, bool ignoreLocalvar )
 		{
+
 			//if ( !InputPorts[ 0 ].IsConnected )
 			//{
 			//	return UIUtils.NoConnection( this );
@@ -130,7 +134,7 @@ namespace AmplifyShaderEditor
 				break;
 				case CoordinateSpaces.View:
 				{
-					UIUtils.ShowMessage( "View as Source is not supported", MessageSeverity.Warning );
+					UIUtils.ShowMessage( UniqueId, "View as Source is not supported", MessageSeverity.Warning );
 					return value;
 				}
 			}

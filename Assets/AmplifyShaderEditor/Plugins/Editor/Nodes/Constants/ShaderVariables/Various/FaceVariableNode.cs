@@ -13,35 +13,38 @@ namespace AmplifyShaderEditor
 		{
 			base.CommonInit( uniqueId );
 			AddOutputPort( WirePortDataType.FLOAT, "Out" );
+			m_previewShaderGUID = "4b0b5b9f16353b840a5f5ad2baab3c3c";
 		}
 
 		public override string GenerateShaderForOutput( int outputId, ref MasterNodeDataCollector dataCollector, bool ignoreLocalvar )
 		{
 			if ( dataCollector.PortCategory == MasterNodePortCategory.Tessellation )
 			{
-				UIUtils.ShowMessage( m_nodeAttribs.Name + " does not work on Tessellation port" );
-				return "0";
+				UIUtils.ShowMessage( UniqueId, m_nodeAttribs.Name + " node does not work on Tessellation port" );
+				return m_outputPorts[0].ErrorValue;
 			}
 
 			if ( dataCollector.PortCategory == MasterNodePortCategory.Vertex )
 			{
 				if ( dataCollector.TesselationActive )
 				{
-					UIUtils.ShowMessage( m_nodeAttribs.Name + " does not work properly on Vertex/Tessellation ports" );
-					return "0";
+					UIUtils.ShowMessage( UniqueId, m_nodeAttribs.Name + " node does not work properly on Vertex/Tessellation ports" );
+					return m_outputPorts[ 0 ].ErrorValue;
 				}
 				else
 				{
-					UIUtils.ShowMessage( m_nodeAttribs.Name + " does not work propery on Vertex ports" );
+					UIUtils.ShowMessage( UniqueId, m_nodeAttribs.Name + " node does not work propery on Vertex ports" );
+					return m_outputPorts[ 0 ].ErrorValue;
 				}
 			}
+
 			if ( dataCollector.IsTemplate )
 			{
-				return dataCollector.TemplateDataCollectorInstance.GetVFace();
+				return dataCollector.TemplateDataCollectorInstance.GetVFace( UniqueId );
 			}
 			else
 			{
-				dataCollector.AddToInput( UniqueId, Constants.VFaceInput, true );
+				dataCollector.AddToInput( UniqueId, SurfaceInputs.VFACE );
 				string variable = ( dataCollector.PortCategory == MasterNodePortCategory.Vertex ) ? Constants.VertexShaderOutputStr : Constants.InputVarStr;
 				return variable + "." + Constants.VFaceVariable;
 			}

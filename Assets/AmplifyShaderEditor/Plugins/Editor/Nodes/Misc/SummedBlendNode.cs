@@ -14,18 +14,19 @@ namespace AmplifyShaderEditor
 		{
 			base.CommonInit( uniqueId );
 			m_inputData = new string[ 6 ];
+			m_previewShaderGUID = "eda18b96e13f78b49bbdaa4da3fead19";
 		}
 
 		public override string GenerateShaderForOutput( int outputId, ref MasterNodeDataCollector dataCollector, bool ignoreLocalvar )
 		{
-			if ( m_outputPorts[ 0 ].IsLocalValue )
-				return m_outputPorts[ 0 ].LocalValue;
+			if ( m_outputPorts[ 0 ].IsLocalValue( dataCollector.PortCategory ) )
+				return m_outputPorts[ 0 ].LocalValue( dataCollector.PortCategory );
 
 			GetInputData( ref dataCollector, ignoreLocalvar );
 
 			string result = string.Empty;
 			string localVarName = "weightedBlendVar" + OutputId;
-			dataCollector.AddLocalVariable( UniqueId, m_currentPrecisionType, m_inputPorts[ 0 ].DataType, localVarName, m_inputData[ 0 ] );
+			dataCollector.AddLocalVariable( UniqueId, CurrentPrecisionType, m_inputPorts[ 0 ].DataType, localVarName, m_inputData[ 0 ] );
 
 			if ( m_activeCount == 0 )
 			{
@@ -49,7 +50,7 @@ namespace AmplifyShaderEditor
 
 			result = UIUtils.AddBrackets( result );
 			RegisterLocalVariable( 0, result, ref dataCollector, "weightedBlend" + OutputId );
-			return m_outputPorts[ 0 ].LocalValue;
+			return m_outputPorts[ 0 ].LocalValue( dataCollector.PortCategory );
 		}
 	}
 }

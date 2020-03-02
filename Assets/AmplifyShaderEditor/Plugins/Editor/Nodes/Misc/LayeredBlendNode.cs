@@ -23,18 +23,19 @@ namespace AmplifyShaderEditor
 			m_inputData = new string[ 6 ];
 			m_minimumSize = 2;
 			UpdateConnection( 0 );
+			m_previewShaderGUID = "48faca2f6506fc44c97adb1e2b79c37d";
 		}
 
 		public override string GenerateShaderForOutput( int outputId, ref MasterNodeDataCollector dataCollector, bool ignoreLocalvar )
 		{
-			if ( m_outputPorts[ 0 ].IsLocalValue )
-				return m_outputPorts[ 0 ].LocalValue;
+			if ( m_outputPorts[ 0 ].IsLocalValue( dataCollector.PortCategory ) )
+				return m_outputPorts[ 0 ].LocalValue( dataCollector.PortCategory );
 
 			GetInputData( ref dataCollector, ignoreLocalvar );
 
 			string result = string.Empty;
 			string localVarName = "layeredBlendVar" + OutputId;
-			dataCollector.AddLocalVariable( UniqueId, m_currentPrecisionType, m_inputPorts[ 0 ].DataType, localVarName, m_inputData[ 0 ] );
+			dataCollector.AddLocalVariable( UniqueId, CurrentPrecisionType, m_inputPorts[ 0 ].DataType, localVarName, m_inputData[ 0 ] );
 			
 			if ( m_activeCount == 1 )
 			{
@@ -54,7 +55,7 @@ namespace AmplifyShaderEditor
 			}
 			result = UIUtils.AddBrackets( result );
 			RegisterLocalVariable( 0, result, ref dataCollector, "layeredBlend" + OutputId );
-			return m_outputPorts[ 0 ].LocalValue;
+			return m_outputPorts[ 0 ].LocalValue( dataCollector.PortCategory );
 		}
 	}
 }
