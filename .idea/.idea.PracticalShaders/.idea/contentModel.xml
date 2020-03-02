@@ -1038,40 +1038,63 @@
           </e>
           <e p="Readme.txt" t="Include" />
         </e>
-        <e p="TP I   - Splatmap" t="Include">
-          <e p="Scripts" t="Include">
-            <e p="CustomizableSkinController.cs" t="Include" />
+        <e p="MyContent" t="Include">
+          <e p="Final - Postprocessing" t="Include">
+            <e p="Framecolor.shader" t="Include" />
           </e>
-          <e p="Shaders (surface)" t="Include">
-            <e p="Splatmaps Optimaze.shader" t="Include" />
-            <e p="Splatmaps.shader" t="Include" />
+          <e p="Final - Postprocessing Greyscale" t="Include">
+            <e p="BlackAndWhite.shader" t="Include" />
           </e>
-        </e>
-        <e p="TP II  - HeightmapBasedTerrain" t="Include">
-          <e p="Shaders (surface)" t="Include">
-            <e p="HeightmapBasedTerrain.shader" t="Include" />
-          </e>
-        </e>
-        <e p="TP III - Matcap" t="Include">
-          <e p="Shader (surface)" t="Include">
-            <e p="TextureMatcap.shader" t="Include" />
-          </e>
-        </e>
-        <e p="TP V -   Postprocessing Palette Swapping" t="Include">
-          <e p="Script" t="Include">
-            <e p="PostProcessGradient.cs" t="Include" />
-          </e>
-          <e p="Shaders" t="Include">
-            <e p="Palette.shader" t="Include" />
-          </e>
-        </e>
-        <e p="TP VI -  Postprocessing Cameras Transition" t="Include">
-          <e p="Scripts" t="Include">
-            <e p="ManagerCameras.cs" t="Include" />
+          <e p="Shared" t="Include">
             <e p="PostProcess.cs" t="Include" />
           </e>
+          <e p="TP I   - Splatmap" t="Include">
+            <e p="Scripts" t="Include">
+              <e p="CustomizableSkinController.cs" t="Include" />
+            </e>
+            <e p="Shaders (surface)" t="Include">
+              <e p="Splatmaps Optimaze.shader" t="Include" />
+              <e p="Splatmaps.shader" t="Include" />
+            </e>
+          </e>
+          <e p="TP II  - HeightmapBasedTerrain" t="Include">
+            <e p="Shaders (surface)" t="Include">
+              <e p="HeightmapBasedTerrain.shader" t="Include" />
+            </e>
+          </e>
+          <e p="TP III - Matcap" t="Include">
+            <e p="Shader (surface)" t="Include">
+              <e p="TextureMatcap.shader" t="Include" />
+            </e>
+          </e>
+          <e p="TP V -   Postprocessing Palette Swapping" t="Include">
+            <e p="Script" t="Include">
+              <e p="PostProcessGradient.cs" t="Include" />
+            </e>
+            <e p="Shaders" t="Include">
+              <e p="Palette.shader" t="Include" />
+            </e>
+          </e>
+          <e p="TP VI -  Postprocessing Cameras Transition" t="Include">
+            <e p="Scripts" t="Include">
+              <e p="ManagerCameras.cs" t="Include" />
+            </e>
+            <e p="Shaders" t="Include">
+              <e p="Transition.shader" t="Include" />
+            </e>
+          </e>
+        </e>
+        <e p="shaders 103 asset" t="Include">
+          <e p="Scripts" t="Include">
+            <e p="QuickGlow.cs" t="Include" />
+            <e p="ReplacementShaderEffect.cs" t="Include" />
+            <e p="SimpleBlur.cs" t="Include" />
+          </e>
           <e p="Shaders" t="Include">
-            <e p="Transition.shader" t="Include" />
+            <e p="CompositeAdd.shader" t="Include" />
+            <e p="OverDraw.shader" t="Include" />
+            <e p="QuickBlur.shader" t="Include" />
+            <e p="ShowDepth.shader" t="Include" />
           </e>
         </e>
       </e>
